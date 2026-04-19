@@ -1,0 +1,23 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 170px;
+  flex-shrink: 0;
+}
+
+.poster {
+  aspect-ratio: 2/3;
+  border-radius: var(--radius);
+}
+
+.info { padding: 0 2px; }
+
+.line {
+  height: 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.title { width: 85%; }
+.meta  { width: 50%; }

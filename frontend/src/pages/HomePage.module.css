@@ -1,0 +1,24 @@
+.heroSkeleton {
+  width: 100%;
+  height: clamp(420px, 56vw, 680px);
+  background: var(--surface);
+}
+
+.section {
+  margin-bottom: 48px;
+  animation: fadeIn 0.5s ease both;
+}
+
+.seeAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  transition: gap 0.2s;
+  white-space: nowrap;
+}
+
+.seeAll:hover { gap: 8px; }

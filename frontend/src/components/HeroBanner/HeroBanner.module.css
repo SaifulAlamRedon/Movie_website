@@ -1,0 +1,178 @@
+.hero {
+  position: relative;
+  width: 100%;
+  height: clamp(420px, 56vw, 680px);
+  overflow: hidden;
+  margin-top: -1px; /* flush under sticky nav */
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center top;
+  transition: opacity 0.4s ease, transform 0.6s ease;
+  transform: scale(1.03);
+}
+
+.bg:not(.fading) { transform: scale(1); }
+
+.fading { opacity: 0; }
+
+.gradientBottom {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    var(--bg) 0%,
+    rgba(10,10,15,0.6) 40%,
+    rgba(10,10,15,0.1) 100%
+  );
+}
+
+.gradientLeft {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(10,10,15,0.9) 0%,
+    rgba(10,10,15,0.4) 50%,
+    transparent 100%
+  );
+}
+
+.content {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  width: 100%;
+  max-width: 600px;
+  padding: 0 clamp(20px, 4vw, 60px);
+  transition: opacity 0.4s ease;
+}
+
+.content.fading { opacity: 0; }
+
+.genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.genreTag {
+  padding: 3px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.25);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.8);
+  backdrop-filter: blur(4px);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  letter-spacing: 0.03em;
+  line-height: 1;
+  color: #fff;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.5);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: 500;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.desc {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 24px;
+  max-width: 480px;
+}
+
+.cta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btnPrimary,
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.btnPrimary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btnPrimary:hover {
+  background: #c42e24;
+  transform: translateY(-1px);
+}
+
+.btnSecondary {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.btnSecondary:hover {
+  background: rgba(255,255,255,0.22);
+}
+
+/* Slide dots */
+.indicators {
+  position: absolute;
+  bottom: 32px;
+  right: clamp(20px, 4vw, 60px);
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  border: none;
+  background: rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: background 0.3s, width 0.3s;
+  padding: 0;
+}
+
+.dotActive {
+  background: var(--accent);
+  width: 48px;
+}
+
+@media (max-width: 600px) {
+  .content { bottom: 60px; }
+  .desc    { display: none; }
+}
