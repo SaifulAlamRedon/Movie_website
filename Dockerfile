@@ -1,38 +1,43 @@
-# Use an official Node.js runtime as a parent image
-FROM node:14 AS build
+FROM node:20-alpine AS frontend-builder
 
-# Set the working directory for the backend
-WORKDIR /app/backend
-
-# Copy the backend package.json and package-lock.json
-COPY backend/package*.json ./
-
-# Install the backend dependencies
-RUN npm install
-
-# Copy the backend source code
-COPY backend/ .
-
-# Build the backend
-RUN npm run build
-
-# Set up the working directory for the frontend
 WORKDIR /app/frontend
 
-# Copy the frontend package.json and package-lock.json
 COPY frontend/package*.json ./
+RUN npm ci
 
-# Install the frontend dependencies
-RUN npm install
-
-# Copy the frontend source code
-COPY frontend/ .
-
-# Build the frontend
+COPY frontend/ ./
 RUN npm run build
 
-# Start application
-CMD ["sh", "-c", "node /app/backend/dist/index.js & serve -s build -l 3000"]
+FROM node:20-alpine AS backend-builder
 
-# Expose ports for frontend and backend
-EXPOSE 3000 3001
+WORKDIR /app/backend
+
+COPY backend/package*.json ./
+RUN npm ci
+
+COPY backend/ ./
+RUN npm run build
+
+FROM node:20-alpine AS production
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+WORKDIR /app
+
+COPY backend/package*.json ./backend/
+RUN cd backend && npm ci --omit=dev && npm cache clean --force
+
+COPY --from=backend-builder /app/backend/dist ./backend/dist
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+
+RUN mkdir -p /app/uploads && chown -R node:node /app
+
+USER node
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || '3000') + '/api/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
+
+CMD ["node", "backend/dist/main.js"]

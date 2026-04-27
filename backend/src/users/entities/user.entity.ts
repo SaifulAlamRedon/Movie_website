@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -38,6 +39,7 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'password_salt', select: false })
   passwordSalt: string | null;
 
+  @Index('IDX_users_last_login_at')
   @Column({ type: 'timestamp', nullable: true, name: 'last_login_at' })
   lastLoginAt: Date | null;
 

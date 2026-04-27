@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  InternalServerErrorException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -178,11 +179,23 @@ export class AuthService {
   }
 
   private getSignupKey() {
-    return this.configService.get<string>('ADMIN_SIGNUP_KEY') ?? 'cinemaflow-admin-setup';
+    const signupKey = this.configService.get<string>('ADMIN_SIGNUP_KEY');
+
+    if (!signupKey) {
+      throw new InternalServerErrorException('Admin signup key is not configured');
+    }
+
+    return signupKey;
   }
 
   private getTokenSecret() {
-    return this.configService.get<string>('ADMIN_TOKEN_SECRET') ?? 'cinemaflow-local-token-secret-change-me';
+    const tokenSecret = this.configService.get<string>('ADMIN_TOKEN_SECRET');
+
+    if (!tokenSecret) {
+      throw new InternalServerErrorException('Admin token secret is not configured');
+    }
+
+    return tokenSecret;
   }
 
   private sign(payloadEncoded: string) {

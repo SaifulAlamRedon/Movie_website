@@ -5,34 +5,50 @@ import { ActivityModule } from './activity/activity.module';
 import { ActivityLog } from './activity/entities/activity-log.entity';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
+import { validateEnv } from './config/validate-env';
+import { InitSchema1714252800000 } from './database/migrations/1714252800000-InitSchema';
+import { HealthController } from './health.controller';
 import { MoviesModule } from './movies/movies.module';
 import { Movie } from './movies/entities/movie.entity';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
 
 @Module({
+  controllers: [HealthController],
   imports: [
-    // Load .env file globally across entire app
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env', 'backend/.env'],
+      validate: validateEnv,
     }),
 
-    // TypeORM database connection
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: config.get<string>('DB_TYPE') === 'sqlite' ? 'sqlite' : 'postgres',
-        host: config.get<string>('DB_HOST') ?? 'localhost',
-        port: Number(config.get<string>('DB_PORT') ?? 5432),
-        username: config.get<string>('DB_USERNAME') ?? 'postgres',
-        password: config.get<string>('DB_PASSWORD') ?? '',
-        database: config.get<string>('DB_NAME') ?? 'cinemaflow',
-        entities: [Movie, User, ActivityLog],
-        synchronize: config.get('NODE_ENV') !== 'production', // Auto-create tables in dev
-        logging: config.get('NODE_ENV') === 'development',
-      }),
+      useFactory: (config: ConfigService) => {
+        const nodeEnv = config.get<string>('NODE_ENV') ?? 'development';
+        const isProduction = nodeEnv === 'production';
+        const databaseUrl = config.get<string>('DATABASE_URL');
+        const shouldSynchronize =
+          !isProduction && config.get<string>('DB_SYNCHRONIZE') !== 'false';
+        const shouldRunMigrations =
+          isProduction || config.get<string>('DB_RUN_MIGRATIONS') === 'true';
+
+        return {
+          type: 'postgres' as const,
+          url: databaseUrl || undefined,
+          host: databaseUrl ? undefined : config.get<string>('DB_HOST'),
+          port: databaseUrl ? undefined : Number(config.get<string>('DB_PORT') ?? 5432),
+          username: databaseUrl ? undefined : config.get<string>('DB_USERNAME'),
+          password: databaseUrl ? undefined : config.get<string>('DB_PASSWORD'),
+          database: databaseUrl ? undefined : config.get<string>('DB_NAME'),
+          entities: [Movie, User, ActivityLog],
+          migrations: [InitSchema1714252800000],
+          migrationsRun: shouldRunMigrations,
+          synchronize: shouldSynchronize,
+          logging: nodeEnv === 'development',
+        };
+      },
     }),
 
     ActivityModule,

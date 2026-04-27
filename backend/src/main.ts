@@ -1,42 +1,70 @@
-import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import * as express from 'express';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import express, { type Request, type Response } from 'express';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
+function findExistingPath(paths: string[]) {
+  return paths.find((path) => existsSync(path));
+}
+
+function getAllowedOrigins() {
+  return (process.env.FRONTEND_URL ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const uploadDir = join(process.cwd(), 'uploads');
+  const frontendDistDir = findExistingPath([
+    join(process.cwd(), 'frontend', 'dist'),
+    join(process.cwd(), '..', 'frontend', 'dist'),
+  ]);
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowedOrigins = getAllowedOrigins();
 
   if (!existsSync(uploadDir)) {
     mkdirSync(uploadDir, { recursive: true });
   }
 
-  // Enable CORS for frontend
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin:
+      allowedOrigins.length > 0
+        ? allowedOrigins
+        : isProduction
+          ? false
+          : 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   });
 
-  // Global validation pipe - auto-validates all DTOs
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,         // Strip unknown properties
-      transform: true,         // Auto-transform types (string -> number etc.)
+      whitelist: true,
+      transform: true,
       forbidNonWhitelisted: false,
     }),
   );
 
-  // Global API prefix
   app.setGlobalPrefix('api');
-
-  // Public uploaded assets for thumbnails and video files
   app.use('/uploads', express.static(uploadDir));
 
-  // Swagger API Documentation setup
+  if (frontendDistDir) {
+    app.use(express.static(frontendDistDir));
+    app.getHttpAdapter().getInstance().get(
+      /^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/,
+      (_req: Request, res: Response) => {
+        res.sendFile(join(frontendDistDir, 'index.html'));
+      },
+    );
+  }
+
   const config = new DocumentBuilder()
     .setTitle('CinemaFlow API')
     .setDescription('Netflix-inspired streaming API with secure admin operations')
@@ -49,11 +77,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3001;
+  const port = Number(process.env.PORT || 3001);
   await app.listen(port);
 
-  console.log(`\n🎬 CinemaFlow API running on: http://localhost:${port}/api`);
-  console.log(`📚 Swagger Docs:             http://localhost:${port}/api/docs\n`);
+  console.log(`CinemaFlow API running on port ${port}`);
+  console.log('Health check: /api/health');
+  console.log('Swagger docs: /api/docs');
 }
 
 bootstrap();

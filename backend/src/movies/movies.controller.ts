@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -6,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseEnumPipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -21,7 +23,6 @@ import {
   ApiOperation,
   ApiParam,
   ApiQuery,
-  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -38,6 +39,41 @@ import {
 import { MoviesService } from './movies.service';
 
 const uploadDirectory = join(process.cwd(), 'uploads');
+const maxUploadSizeBytes = 250 * 1024 * 1024;
+
+enum UploadAssetKind {
+  Poster = 'poster',
+  Backdrop = 'backdrop',
+  Stream = 'stream',
+  Download = 'download',
+}
+
+const uploadKindRules: Record<
+  UploadAssetKind,
+  { extensions: Set<string>; mimePatterns: RegExp[] }
+> = {
+  [UploadAssetKind.Poster]: {
+    extensions: new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']),
+    mimePatterns: [/^image\//],
+  },
+  [UploadAssetKind.Backdrop]: {
+    extensions: new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']),
+    mimePatterns: [/^image\//],
+  },
+  [UploadAssetKind.Stream]: {
+    extensions: new Set(['.mp4', '.webm', '.mkv']),
+    mimePatterns: [/^video\//],
+  },
+  [UploadAssetKind.Download]: {
+    extensions: new Set(['.mp4', '.webm', '.mkv', '.zip']),
+    mimePatterns: [
+      /^video\//,
+      /^application\/zip$/,
+      /^application\/x-zip-compressed$/,
+      /^application\/octet-stream$/,
+    ],
+  },
+};
 
 const uploadStorage = diskStorage({
   destination: (_req: any, _file: any, callback: any) => {
@@ -53,6 +89,33 @@ const uploadStorage = diskStorage({
     callback(null, `${uniquePrefix}${extension}`);
   },
 });
+
+const uploadInterceptorOptions = {
+  storage: uploadStorage,
+  limits: {
+    fileSize: maxUploadSizeBytes,
+  },
+  fileFilter: (req: any, file: any, callback: any) => {
+    const kind = req.params.kind as UploadAssetKind;
+    const rules = uploadKindRules[kind];
+
+    if (!rules) {
+      callback(new BadRequestException('Unsupported upload kind'), false);
+      return;
+    }
+
+    const extension = extname(file.originalname).toLowerCase();
+    const extensionAllowed = rules.extensions.has(extension);
+    const mimeAllowed = rules.mimePatterns.some((pattern) => pattern.test(file.mimetype));
+
+    if (!extensionAllowed || !mimeAllowed) {
+      callback(new BadRequestException(`Invalid file type for ${kind} upload`), false);
+      return;
+    }
+
+    callback(null, true);
+  },
+};
 
 @ApiTags('movies')
 @Controller('movies')
@@ -128,9 +191,10 @@ export class MoviesController {
 
   @Post('upload/:kind')
   @UseGuards(AdminAuthGuard)
-  @UseInterceptors(FileInterceptor('file', { storage: uploadStorage }))
+  @UseInterceptors(FileInterceptor('file', uploadInterceptorOptions))
   @ApiOperation({ summary: 'Upload a video file or thumbnail for admin use' })
   @ApiConsumes('multipart/form-data')
+  @ApiParam({ name: 'kind', enum: UploadAssetKind })
   @ApiBody({
     schema: {
       type: 'object',
@@ -143,20 +207,17 @@ export class MoviesController {
     },
   })
   async uploadAsset(
-    @Param('kind') kind: string,
+    @Param('kind', new ParseEnumPipe(UploadAssetKind)) kind: UploadAssetKind,
     @UploadedFile() file: any,
     @Req() req: any,
   ) {
     if (!file) {
-      return { message: 'No file uploaded' };
+      throw new BadRequestException(`No ${kind} file was uploaded`);
     }
 
     const fileUrl = `/uploads/${file.filename}`;
 
-    return this.moviesService.registerUpload(
-      fileUrl,
-      req.admin?.id,
-    );
+    return this.moviesService.registerUpload(fileUrl, req.admin?.id);
   }
 
   @Post('seed')

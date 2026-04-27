@@ -26,7 +26,7 @@ export class Movie {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Index()
+  @Index('IDX_movies_title')
   @Column({ type: 'varchar', length: 255 })
   title: string;
 

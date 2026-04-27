@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -28,6 +29,7 @@ export class ActivityLog {
   @Column({ type: 'text', nullable: true })
   details: string | null;
 
+  @Index('IDX_activity_logs_created_at')
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;
 }
