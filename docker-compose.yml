@@ -1,1 +1,35 @@
-version: '3.8'\n\nservices:\n  db:\n    image: postgres:latest\n    restart: always\n    environment:\n      POSTGRES_USER: user\n      POSTGRES_PASSWORD: password\n      POSTGRES_DB: movie_website\n    volumes:\n      - db_data:/var/lib/postgresql/data\n    networks:\n      - movie-network\n\n  backend:\n    build:\n      context: ./backend\n    restart: always\n    ports:\n      - "5000:5000"\n    environment:\n      DATABASE_URL: postgres://user:password@db:5432/movie_website\n    networks:\n      - movie-network\n\n  frontend:\n    build:\n      context: ./frontend\n    restart: always\n    ports:\n      - "3000:3000"\n    networks:\n      - movie-network\n\nvolumes:\n  db_data:\n\nn networks:\n  movie-network:
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    image: my-backend-image:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@postgres:5432/mydatabase
+    depends_on:
+      - postgres
+
+  frontend:
+    image: my-frontend-image:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '3000:3000'
+
+volumes:
+  postgres_data: {}
