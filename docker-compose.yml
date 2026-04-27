@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 version: "3.9"
 
 services:
@@ -52,3 +53,40 @@ volumes:
 
 networks:
   cinemaflow:
+=======
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    image: my-backend-image:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@postgres:5432/mydatabase
+    depends_on:
+      - postgres
+
+  frontend:
+    image: my-frontend-image:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '3000:3000'
+
+volumes:
+  postgres_data: {}
+>>>>>>> 73d70dd4fa7328a5b799dc8078ed40efe6147f33
